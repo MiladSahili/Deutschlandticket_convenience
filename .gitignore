@@ -9,6 +9,11 @@ data/*.mapdb.p
 data/*.p
 .R5-cache/
 
+cache/
+__pycache__/
+.ipynb_checkpoints/
+
+
 # Python Standard-Caches
 __pycache__/
 *.pyc
