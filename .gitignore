@@ -1,6 +1,6 @@
 
 .env
-
+.vscode/
 
 data/GTFS.zip
 data/hamburg-latest.osm.pbf
