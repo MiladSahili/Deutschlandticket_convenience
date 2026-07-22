@@ -1,3 +1,14 @@
+import numpy as np         
+import pandas as pd         
+import geopandas as gpd    
+from shapely.geometry import Point   
+
+
+SEED = 89
+N_EMPLOYEES = 2000
+
+
+JJ_LAT , JJ_LON = 53.6866, 9.9934   # Robert-Koch-Straße 1, Norderstedtja
 
 #The weights are the amount of citizens in that district
 CITY_DISTRICTS_WEIGHTS = {
@@ -13,7 +24,7 @@ CITY_DISTRICTS_WEIGHTS = {
     "Barmbek-Süd":      ("Barmbek-Süd, Hamburg, Germany", 37091),
     "Eppendorf":        ("Eppendorf, Hamburg, Germany", 25234),
 
-    # Eimsbüttel (Bezirk)
+    # Eimsbüttel 
     "Niendorf":         ("Niendorf, Eimsbüttel, Hamburg, Germany", 42496),
     "Schnelsen":        ("Schnelsen, Hamburg, Germany", 31323),
     "Eidelstedt":       ("Eidelstedt, Hamburg, Germany", 36705),
@@ -21,7 +32,7 @@ CITY_DISTRICTS_WEIGHTS = {
     "Stellingen":       ("Stellingen, Hamburg, Germany", 28812),
     "Eimsbüttel":       ("Eimsbüttel, Hamburg, Germany", 57798),
 
-    # Altona (Bezirk)
+    # Altona 
     "Altona-Altstadt":  ("Altona-Altstadt, Hamburg, Germany", 29680),
     "Altona-Nord":      ("Altona-Nord, Hamburg, Germany", 26777),
     "Ottensen":         ("Ottensen, Hamburg, Germany", 35925),
@@ -32,7 +43,7 @@ CITY_DISTRICTS_WEIGHTS = {
     # Hamburg-Mitte
     "St. Pauli":        ("St. Pauli, Hamburg, Germany", 22377),
 
-    # Wandsbek (Bezirk)
+    # Wandsbek 
     "Bramfeld":         ("Bramfeld, Hamburg, Germany", 53543),
     "Poppenbüttel":     ("Poppenbüttel, Hamburg, Germany", 24598),
     "Hummelsbüttel":    ("Hummelsbüttel, Hamburg, Germany", 18731),
@@ -40,7 +51,7 @@ CITY_DISTRICTS_WEIGHTS = {
     "Rahlstedt":        ("Rahlstedt, Hamburg, Germany", 95836),
     "Farmsen-Berne":    ("Farmsen-Berne, Hamburg, Germany", 39266),
 
-    # Schleswig-Holstein (Näherungswerte, kein zentrales Melderegister)
+    # Schleswig-Holstein (roundabout citizens)
     "Norderstedt":      ("Norderstedt, Germany", 83000),
     "Henstedt-Ulzburg": ("Henstedt-Ulzburg, Germany", 28000),
     "Quickborn":        ("Quickborn, Kreis Pinneberg, Germany", 22000),
@@ -52,10 +63,65 @@ CITY_DISTRICTS_WEIGHTS = {
     "Hoheluft-Ost":     ("Hoheluft-Ost, Hamburg, Germany", 9853),
     "Dulsberg":         ("Dulsberg, Hamburg, Germany", 17230),
 
-    # Eimsbüttel (Ergänzung)
+    # Eimsbüttel 
     "Hoheluft-West":    ("Hoheluft-West, Hamburg, Germany", 13641),
 
-    # Wandsbek (Ergänzung)
+    # Wandsbek 
     "Steilshoop":       ("Steilshoop, Hamburg, Germany", 19902),
 }
 
+
+
+#assigning a district to each employee weighted with the amount of citizens of that district
+
+def assign_district(n , rng):
+    names = list(CITY_DISTRICTS_WEIGHTS.keys())
+    weights = np.array([v[1] for v in CITY_DISTRICTS_WEIGHTS.values()], dtype=float)
+    return rng.choice(names, size=n, p=weights / weights.sum())
+       
+
+
+def sample_points_in_polygon(polygon, n , rng):
+    #the lon and lat from the districts
+    minx, miny, maxx, maxy = polygon.bounds 
+    Result = []
+
+    while len(Result)< n:
+        random_point_x = rng.uniform(minx , maxx)
+        random_point_y = rng.uniform(miny, maxy)
+        random_point = Point(random_point_x,random_point_y)
+        if polygon.contains(random_point):
+            Result.append(random_point)
+    return(Result)        
+
+
+def main():
+    rng = np.random.default_rng(SEED)
+    polygons = gpd.read_file("data/stadtteile.geojson").set_index("stadtteil")
+
+    df = pd.DataFrame({"stadtteil": assign_district(N_EMPLOYEES, rng)})
+
+    lat = np.empty(N_EMPLOYEES)   
+    lon = np.empty(N_EMPLOYEES)
+
+    for name, group in df.groupby("stadtteil"):  #filling the empty arrays with the real points
+        pts = sample_points_in_polygon(polygons.loc[name, "geometry"], len(group), rng)
+        lat[group.index] = [p.y for p in pts]
+        lon[group.index] = [p.x for p in pts]
+
+    df["lat"] = lat   
+    df["lon"] = lon
+  
+
+    df.insert(0, "employee_id", [f"EMP{i:04d}" for i in range(1, N_EMPLOYEES + 1)])
+ 
+    df["hat_auto"] = rng.random(N_EMPLOYEES) < 0.75
+ 
+
+    df.to_csv("data/employees.csv", index=False)
+    print(df["stadtteil"].value_counts().to_string())
+    print(f"\n{len(df)} Mitarbeiter angelegt in data/employees.csv")
+ 
+ 
+if __name__ == "__main__":
+    main()

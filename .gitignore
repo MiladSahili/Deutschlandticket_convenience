@@ -1,0 +1,15 @@
+
+.env
+
+
+data/GTFS.zip
+data/hamburg-latest.osm.pbf
+data/*.mapdb
+data/*.mapdb.p
+data/*.p
+.R5-cache/
+
+# Python Standard-Caches
+__pycache__/
+*.pyc
+

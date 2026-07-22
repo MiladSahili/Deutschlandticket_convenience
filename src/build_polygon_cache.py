@@ -4,7 +4,7 @@ import osmnx as ox
 import geopandas as gpd
 import pandas as pd
 
-from generate_data import CITY_DISTRICTS_WEIGHTS  # dasselbe Dict, keine Kopie pflegen
+from generate_data import CITY_DISTRICTS_WEIGHTS  
 
 
 def main():
@@ -14,7 +14,7 @@ def main():
         gdf = ox.geocode_to_gdf(query)
         gdf["stadtteil"] = name
         gdfs.append(gdf[["stadtteil", "geometry"]])
-        time.sleep(1)  # Nominatim-Rate-Limit: max. 1 Request/Sekunde
+        time.sleep(1)  #Because of Nominatim rate limit
 
     combined = gpd.GeoDataFrame(pd.concat(gdfs, ignore_index=True), crs="EPSG:4326")
     combined.to_file("data/stadtteile.geojson", driver="GeoJSON")
